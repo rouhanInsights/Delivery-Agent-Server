@@ -12,6 +12,10 @@ app.use(express.json());
 app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/auth', authRoutes);
 app.get('/api/health', (req, res) => res.status(200).json({status: 'ok'}));
+app.get('/api/health/db', async (_req, res) => {
+  try { await pool.query('SELECT 1'); res.json({ db: 'ok' }); }
+  catch (e) { console.error(e); res.status(500).json({ db: 'down', err: String(e) }); }
+});
  // ✅ no need to require again inline
 
 const PORT = process.env.PORT || 5000;
