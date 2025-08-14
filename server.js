@@ -12,7 +12,7 @@ app.use(express.json());
 app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/auth', authRoutes);
 app.get('/api/health', (req, res) => res.status(200).json({status: 'ok'}));
-app.get('/healthz', async (req, res) => {
+app.get('/api/health/db', async (req, res) => {
   try {
     const r = await pool.query('SELECT 1 as ok');
     res.json({ ok: true, db: r.rows[0].ok === 1 });
