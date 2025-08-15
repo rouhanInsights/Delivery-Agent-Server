@@ -48,7 +48,7 @@ const registerUser = async (req, res) => {
       name: fullName,
       email,
       phone,
-      passwordHash: hashedPassword,
+      passwordHash,
       vehicle,
        govtId,
       upload_img: imageUrl,
