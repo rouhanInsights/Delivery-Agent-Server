@@ -50,7 +50,7 @@ const registerUser = async (req, res) => {
       phone,
       passwordHash: hashedPassword,
       vehicle,
-      govt_id: govtId,
+       govtId,
       upload_img: imageUrl,
     });
     console.log("✅ User created successfully with ID:", user.user_id);
