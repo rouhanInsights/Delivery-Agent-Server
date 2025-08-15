@@ -2,58 +2,74 @@ const bcrypt = require('bcrypt');
 const { createUser, findUserByEmail } = require('../models/userModel');
 const cloudinary = require('../utils/cloudinary');
 
-const uploadToCloudinary = (fileBuffer) => {
-  return new Promise((resolve, reject) => {
+const uploadToCloudinary = (fileBuffer) =>
+  new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       { folder: 'delivery_agents' },
-      (error, result) => {
-        if (error) return reject(error);
-        return resolve(result);
-      }
+      (error, result) => (error ? reject(error) : resolve(result))
     );
     stream.end(fileBuffer);
   });
-};
 
 const registerUser = async (req, res) => {
-  console.log("📥 Incoming Registration Request");
-  console.log("➡️ Body:", req.body);
-  console.log("➡️ File:", req.file ? { fieldname: req.file.fieldname, size: req.file.size, mimetype: req.file.mimetype } : null);
+  console.log('📥 Incoming Registration Request');
+  console.log('➡️ BODY keys:', Object.keys(req.body || {}));
+  const filesArr = req.files || (req.file ? [req.file] : []);
+  console.log(
+    '➡️ FILES:',
+    filesArr.map((f) => ({ field: f.fieldname, type: f.mimetype, size: f.size }))
+  );
 
-  const { fullName, email, phone, password, vehicle, govtId } = req.body;
+  // Normalize inputs so old/new clients both work
+  const raw = req.body || {};
+  const fullName = (raw.fullName || raw.name || '').trim();
+  const email    = (raw.email || '').trim();
+  const phone    = (raw.phone || '').trim();
+  const password = (raw.password || '').trim();
+  const vehicle  = (raw.vehicle || '').trim();
+  const govtId   = (raw.govtId || raw.govt_id || '').trim();
+
+  // Support upload.single('upload_img') or upload.any()
+  const file = req.file || (Array.isArray(req.files) ? req.files.find(f => f.fieldname === 'upload_img') : null);
+
+  const missing = [];
+  if (!fullName) missing.push('fullName/name');
+  if (!email)    missing.push('email');
+  if (!phone)    missing.push('phone');
+  if (!password) missing.push('password');
+  if (!vehicle)  missing.push('vehicle');
+  if (!govtId)   missing.push('govtId/govt_id');
+  if (!file)     missing.push('upload_img');
+  if (missing.length) {
+    return res.status(400).json({ error: `Missing required fields: ${missing.join(', ')}` });
+  }
 
   try {
-    console.log("🔍 Checking if user already exists for email:", email);
+    console.log('🔍 Checking if user already exists for email:', email);
     const existingUser = await findUserByEmail(email);
     if (existingUser) {
-      console.warn("⚠️ Email already registered:", email);
-      return res.status(400).json({ error: 'Email already registered' });
+      console.warn('⚠️ Email already registered:', email);
+      return res.status(409).json({ error: 'Email already registered' });
     }
 
-    if (!req.file) {
-      console.warn("⚠️ No Govt ID image found in request");
-      return res.status(400).json({ error: 'Govt ID image is required' });
-    }
+    console.log('⬆️ Uploading Govt ID to Cloudinary...');
+    const { secure_url } = await uploadToCloudinary(file.buffer);
+    console.log('✅ Cloudinary Upload Result:', secure_url);
 
-    console.log("⬆️ Uploading Govt ID to Cloudinary...");
-    const result = await uploadToCloudinary(req.file.buffer);
-    console.log("✅ Cloudinary Upload Result:", result.secure_url);
-    const imageUrl = result.secure_url;
+    console.log('🔑 Hashing password...');
+    const passwordHash = await bcrypt.hash(password, 10);
 
-    console.log("🔑 Hashing password...");
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    console.log("💾 Inserting user into database...");
+    console.log('💾 Inserting user into database...');
     const user = await createUser({
       name: fullName,
       email,
       phone,
-      passwordHash:hashedPassword,
+      passwordHash,
       vehicle,
-       govtId,
-      upload_img: imageUrl,
+      govtId,            // ✅ correct key expected by the model
+      upload_img: secure_url,
     });
-    console.log("✅ User created successfully with ID:", user.user_id);
+    console.log('✅ User created successfully with ID:', user.user_id);
 
     return res.status(201).json({ message: 'User registered successfully', user });
   } catch (error) {
@@ -80,13 +96,7 @@ const loginUser = async (req, res) => {
 
     res.status(200).json({
       message: 'Login successful',
-      user: {
-        user_id,
-        name,
-        phone,
-        email: userEmail,
-        vehicle: vehicle_details,
-      },
+      user: { user_id, name, phone, email: userEmail, vehicle: vehicle_details },
     });
   } catch (err) {
     console.error('Login Error:', err);
@@ -114,8 +124,4 @@ const getUserProfile = async (req, res) => {
   }
 };
 
-module.exports = {
-  registerUser,
-  loginUser,
-  getUserProfile,
-};
+module.exports = { registerUser, loginUser, getUserProfile };
