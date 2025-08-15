@@ -19,28 +19,7 @@ const registerUser = async (req, res) => {
   console.log("📥 Incoming Registration Request");
   console.log("➡️ Body:", req.body);
   console.log("➡️ File:", req.file ? { fieldname: req.file.fieldname, size: req.file.size, mimetype: req.file.mimetype } : null);
-const raw = req.body || {};
-const fullName = (raw.fullName || raw.name || '').trim();
-const email    = (raw.email || '').trim();
-const phone    = (raw.phone || '').trim();
-const password = (raw.password || '').trim();     // ← the one we care about
-const vehicle  = (raw.vehicle || '').trim();
-const govtId   = (raw.govtId || raw.govt_id || '').trim();
 
-const missing = [];
-if (!fullName) missing.push('fullName/name');
-if (!email)    missing.push('email');
-if (!phone)    missing.push('phone');
-if (!password) missing.push('password');          // ← now explicit
-if (!vehicle)  missing.push('vehicle');
-if (!govtId)   missing.push('govtId/govt_id');
-
-const file = req.file || (req.files && req.files.find(f => f.fieldname === 'upload_img'));
-if (!file) missing.push('upload_img');
-
-if (missing.length) {
-  return res.status(400).json({ error: `Missing required fields: ${missing.join(', ')}` });
-}
   const { fullName, email, phone, password, vehicle, govtId } = req.body;
 
   try {
