@@ -16,23 +16,34 @@ const uploadToCloudinary = (fileBuffer) => {
 };
 
 const registerUser = async (req, res) => {
+  console.log("📥 Incoming Registration Request");
+  console.log("➡️ Body:", req.body);
+  console.log("➡️ File:", req.file ? { fieldname: req.file.fieldname, size: req.file.size, mimetype: req.file.mimetype } : null);
+
   const { fullName, email, phone, password, vehicle, govtId } = req.body;
 
   try {
+    console.log("🔍 Checking if user already exists for email:", email);
     const existingUser = await findUserByEmail(email);
     if (existingUser) {
+      console.warn("⚠️ Email already registered:", email);
       return res.status(400).json({ error: 'Email already registered' });
     }
 
     if (!req.file) {
+      console.warn("⚠️ No Govt ID image found in request");
       return res.status(400).json({ error: 'Govt ID image is required' });
     }
 
+    console.log("⬆️ Uploading Govt ID to Cloudinary...");
     const result = await uploadToCloudinary(req.file.buffer);
+    console.log("✅ Cloudinary Upload Result:", result.secure_url);
     const imageUrl = result.secure_url;
 
+    console.log("🔑 Hashing password...");
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    console.log("💾 Inserting user into database...");
     const user = await createUser({
       name: fullName,
       email,
@@ -42,14 +53,14 @@ const registerUser = async (req, res) => {
       govt_id: govtId,
       upload_img: imageUrl,
     });
+    console.log("✅ User created successfully with ID:", user.user_id);
 
     return res.status(201).json({ message: 'User registered successfully', user });
   } catch (error) {
-    console.error('Registration Error:', error);
-    return res.status(500).json({ error: 'Server error during registration' });
+    console.error('❌ Registration Error:', error);
+    return res.status(500).json({ error: 'Server error during registration', details: error.message });
   }
 };
-
 
 // LOGIN
 const loginUser = async (req, res) => {
