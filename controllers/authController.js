@@ -1,4 +1,4 @@
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 const { createUser, findUserByEmail } = require('../models/userModel');
 const cloudinary = require('../utils/cloudinary');
 
@@ -48,7 +48,7 @@ const registerUser = async (req, res) => {
       name: fullName,
       email,
       phone,
-      passwordHash,
+      passwordHash:hashedPassword,
       vehicle,
        govtId,
       upload_img: imageUrl,
