@@ -87,10 +87,10 @@ const loginUser = async (req, res) => {
 
   try {
     const user = await findUserByEmail(email);
-    if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+    if (!user) return res.status(401).json({ error: 'Invalid email' });
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
-    if (!isMatch) return res.status(401).json({ error: 'Invalid credentials' });
+    if (!isMatch) return res.status(401).json({ error: 'Invalid password' });
 
     const { user_id, name, phone, email: userEmail, vehicle_details } = user;
 
